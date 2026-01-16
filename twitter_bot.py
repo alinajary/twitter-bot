@@ -111,7 +111,12 @@ class TwitterBot:
         chrome_options.add_experimental_option("debuggerAddress", "127.0.0.1:9222")
         
         try:
-            self.driver = webdriver.Chrome(options=chrome_options)
+            # Use system chromedriver on Linux, webdriver-manager on Windows
+            if sys.platform == "linux" or sys.platform == "linux2":
+                service = Service("/usr/bin/chromedriver")
+                self.driver = webdriver.Chrome(service=service, options=chrome_options)
+            else:
+                self.driver = webdriver.Chrome(options=chrome_options)
             self.wait = WebDriverWait(self.driver, 20)
             print("✓ Successfully connected to Chrome!")
         except Exception as e:
