@@ -88,26 +88,27 @@ class TwitterBot:
         time.sleep(2)  # Wait for Chrome processes to close
         print("✓ Previous Chrome windows closed")
         
-        # Use undetected_chromedriver on Linux headless to bypass bot detection
+        # Use undetected_chromedriver on Linux with Xvfb to bypass bot detection
         if (sys.platform == "linux" or sys.platform == "linux2") and headless and UC_AVAILABLE:
-            print("Using undetected_chromedriver for anti-bot protection...")
+            print("Using undetected_chromedriver with virtual display for anti-bot protection...")
             options = uc.ChromeOptions()
             options.add_argument('--no-sandbox')
             options.add_argument('--disable-dev-shm-usage')
-            options.add_argument('--disable-gpu')
             options.add_argument('--window-size=1920,1080')
             options.add_argument(f'--user-data-dir={chrome_profile_path}')
             
+            # Set virtual display for Xvfb
+            os.environ['DISPLAY'] = ':99'
+            
             try:
-                # Use system chromedriver with UC
+                # Use system chromedriver with UC (NO headless=True, using Xvfb instead)
                 self.driver = uc.Chrome(
                     options=options, 
-                    headless=True, 
                     use_subprocess=False,
                     driver_executable_path="/usr/bin/chromedriver"
                 )
                 self.wait = WebDriverWait(self.driver, 20)
-                print("✓ Successfully started undetected Chrome!")
+                print("✓ Successfully started undetected Chrome with virtual display!")
             except Exception as e:
                 print(f"✗ Error starting undetected Chrome: {e}")
                 raise
