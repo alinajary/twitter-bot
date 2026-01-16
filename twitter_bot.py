@@ -12,6 +12,13 @@ from webdriver_manager.chrome import ChromeDriverManager
 import subprocess
 from credentials_manager import get_credentials, has_credentials, setup_credentials
 
+# Import undetected_chromedriver for Linux servers (bypasses bot detection)
+try:
+    import undetected_chromedriver as uc
+    UC_AVAILABLE = True
+except ImportError:
+    UC_AVAILABLE = False
+
 class TwitterBot:
     """
     A class to automate Twitter interactions using Selenium.
@@ -81,46 +88,65 @@ class TwitterBot:
         time.sleep(2)  # Wait for Chrome processes to close
         print("✓ Previous Chrome windows closed")
         
-        # Start Chrome with debugging port
-        cmd = [
-            chrome_exe,
-            f'--user-data-dir={chrome_profile_path}',
-            '--remote-debugging-port=9222'
-        ]
-        
-        # Add headless options for server mode
-        if headless:
-            cmd.extend([
-                '--headless=new',
-                '--no-sandbox',
-                '--disable-dev-shm-usage',
-                '--disable-gpu',
-                '--window-size=1920,1080',
-            ])
-        
-        try:
-            subprocess.Popen(cmd)
-            print("✓ Chrome started!")
-            time.sleep(5)  # Wait for Chrome to fully load
-        except Exception as e:
-            print(f"✗ Error starting Chrome: {e}")
-            raise
-        
-        # Connect to the running Chrome instance FIRST
-        chrome_options = Options()
-        chrome_options.add_experimental_option("debuggerAddress", "127.0.0.1:9222")
-        
-        try:
-            # Use system chromedriver on Linux, webdriver-manager on Windows
-            if sys.platform == "linux" or sys.platform == "linux2":
-                service = Service("/usr/bin/chromedriver")
-                self.driver = webdriver.Chrome(service=service, options=chrome_options)
-            else:
-                self.driver = webdriver.Chrome(options=chrome_options)
-            self.wait = WebDriverWait(self.driver, 20)
-            print("✓ Successfully connected to Chrome!")
-        except Exception as e:
-            print(f"✗ Error connecting to Chrome: {e}")
+        # Use undetected_chromedriver on Linux headless to bypass bot detection
+        if (sys.platform == "linux" or sys.platform == "linux2") and headless and UC_AVAILABLE:
+            print("Using undetected_chromedriver for anti-bot protection...")
+            options = uc.ChromeOptions()
+            options.add_argument('--no-sandbox')
+            options.add_argument('--disable-dev-shm-usage')
+            options.add_argument('--disable-gpu')
+            options.add_argument('--window-size=1920,1080')
+            options.add_argument(f'--user-data-dir={chrome_profile_path}')
+            
+            try:
+                self.driver = uc.Chrome(options=options, headless=True, use_subprocess=False)
+                self.wait = WebDriverWait(self.driver, 20)
+                print("✓ Successfully started undetected Chrome!")
+            except Exception as e:
+                print(f"✗ Error starting undetected Chrome: {e}")
+                raise
+        else:
+            # Original method for Windows or non-headless
+            # Start Chrome with debugging port
+            cmd = [
+                chrome_exe,
+                f'--user-data-dir={chrome_profile_path}',
+                '--remote-debugging-port=9222'
+            ]
+            
+            # Add headless options for server mode
+            if headless:
+                cmd.extend([
+                    '--headless=new',
+                    '--no-sandbox',
+                    '--disable-dev-shm-usage',
+                    '--disable-gpu',
+                    '--window-size=1920,1080',
+                ])
+            
+            try:
+                subprocess.Popen(cmd)
+                print("✓ Chrome started!")
+                time.sleep(5)  # Wait for Chrome to fully load
+            except Exception as e:
+                print(f"✗ Error starting Chrome: {e}")
+                raise
+            
+            # Connect to the running Chrome instance
+            chrome_options = Options()
+            chrome_options.add_experimental_option("debuggerAddress", "127.0.0.1:9222")
+            
+            try:
+                # Use system chromedriver on Linux, webdriver-manager on Windows
+                if sys.platform == "linux" or sys.platform == "linux2":
+                    service = Service("/usr/bin/chromedriver")
+                    self.driver = webdriver.Chrome(service=service, options=chrome_options)
+                else:
+                    self.driver = webdriver.Chrome(options=chrome_options)
+                self.wait = WebDriverWait(self.driver, 20)
+                print("✓ Successfully connected to Chrome!")
+            except Exception as e:
+                print(f"✗ Error connecting to Chrome: {e}")
             print("Make sure Chrome started correctly and is logged into X")
             raise
         
