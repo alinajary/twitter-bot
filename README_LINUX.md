@@ -1,7 +1,7 @@
 # Twitter Bot - Linux Server Deployment Guide
 
 ## Overview
-This guide shows how to deploy the Twitter bot on a Linux server (Ubuntu/Debian).
+This guide shows how to deploy the Twitter bot on a Linux server (Ubuntu/Debian) using Xvfb virtual display and undetected-chromedriver for anti-bot protection.
 
 ## Prerequisites
 - Ubuntu 18.04+ or Debian 10+
@@ -11,13 +11,49 @@ This guide shows how to deploy the Twitter bot on a Linux server (Ubuntu/Debian)
 ## Quick Setup (Automated)
 
 ```bash
-# 1. Clone or download the project
-cd /path/to/twitter-bot
+# 1. Clone the project
+git clone https://github.com/alinajary/twitter-bot.git
+cd twitter-bot
 
-# 2. Run automatic setup
-chmod +x setup_linux.sh
-./setup_linux.sh
+# 2. Install dependencies
+sudo apt-get update
+sudo apt-get install -y python3 python3-pip python3-venv chromium-browser chromium-chromedriver xvfb
+
+# 3. Create virtual environment
+python3 -m venv venv
+source venv/bin/activate
+
+# 4. Install Python packages
+pip install -r requirements.txt
+pip install undetected-chromedriver
+
+# 5. Setup credentials
+python3 -c "from credentials_manager import setup_credentials; setup_credentials()"
+
+# 6. ONE-TIME: Manual login to establish session
+chmod +x setup_login.sh
+./setup_login.sh
+# When Chrome opens, log into X/Twitter, then press ENTER
+
+# 7. Run the bot (fully automated after first login)
+chmod +x run_bot_server.sh
+./run_bot_server.sh
 ```
+
+## Important: First-Time Login
+
+**You must log into X/Twitter once manually** to establish the session. After that, all future runs are fully automated.
+
+```bash
+# Run one-time setup
+./setup_login.sh
+```
+
+This will:
+1. Start virtual display (Xvfb)
+2. Open Chrome for manual login
+3. Save your session for future automated runs
+4. Press ENTER after logging in
 
 ## Manual Setup
 
