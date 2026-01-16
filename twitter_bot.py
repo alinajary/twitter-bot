@@ -99,7 +99,13 @@ class TwitterBot:
             options.add_argument(f'--user-data-dir={chrome_profile_path}')
             
             try:
-                self.driver = uc.Chrome(options=options, headless=True, use_subprocess=False)
+                # Use system chromedriver with UC
+                self.driver = uc.Chrome(
+                    options=options, 
+                    headless=True, 
+                    use_subprocess=False,
+                    driver_executable_path="/usr/bin/chromedriver"
+                )
                 self.wait = WebDriverWait(self.driver, 20)
                 print("✓ Successfully started undetected Chrome!")
             except Exception as e:
