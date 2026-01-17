@@ -9,8 +9,8 @@ from pathlib import Path
 with open('twitter_cookies.json', 'r') as f:
     cookies = json.load(f)
 
-# Chrome cookie database on Linux
-cookie_db = os.path.expanduser('~/.config/chromium/Default/Cookies')
+# Chrome cookie database on Linux - USE GOOGLE-CHROME PATH
+cookie_db = os.path.expanduser('~/.config/google-chrome/Default/Cookies')
 
 # Create directory if it doesn't exist
 os.makedirs(os.path.dirname(cookie_db), exist_ok=True)
