@@ -720,9 +720,16 @@ class TwitterBot:
             limit (int): The maximum number of posts to interact with.
         """
         try:
-            # Use f=live filter for latest tweets only
-            search_url = f"https://x.com/search?q=%23{hashtag}&f=live"
-            print(f"\n🔍 Searching for #{hashtag} (latest tweets only)...")
+            # 50% chance to use Top (popular) vs Live (latest)
+            # Top = more engagement, Live = more recent
+            use_top = random.random() < 0.5
+            
+            if use_top:
+                search_url = f"https://x.com/search?q=%23{hashtag}&f=top"
+                print(f"\n🔍 Searching for #{hashtag} (top/popular tweets)...")
+            else:
+                search_url = f"https://x.com/search?q=%23{hashtag}&f=live"
+                print(f"\n🔍 Searching for #{hashtag} (latest tweets)...")
             self.driver.get(search_url)
             self._human_like_delay(3, 5)
             
@@ -736,8 +743,15 @@ class TwitterBot:
                 print(f"⚠ No recent tweets found for #{hashtag}")
                 return
             
-            # Limit to requested number
-            tweets_to_interact = recent_tweets[:limit]
+            # Sort by engagement and filter (minimum 10 likes, 5 retweets)
+            high_engagement_tweets = self._sort_by_engagement(recent_tweets, min_likes=10, min_retweets=5)
+            
+            # If too few high-engagement tweets, use all recent tweets
+            if len(high_engagement_tweets) < limit // 2:
+                print(f"⚠ Only {len(high_engagement_tweets)} high-engagement tweets, using all recent tweets")
+                tweets_to_interact = recent_tweets[:limit]
+            else:
+                tweets_to_interact = high_engagement_tweets[:limit]
             print(f"\n👍 Will interact with {len(tweets_to_interact)} tweets for #{hashtag}\n")
 
             # Interact with each tweet in the batch
