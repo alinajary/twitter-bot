@@ -363,6 +363,80 @@ class TwitterBot:
             delay += random.uniform(30, 60)
             print(f"Simulating 'reading' time... waiting {int(delay)}s")
         time.sleep(delay)
+    
+    def _is_post_recent(self, post_element, max_hours=48):
+        """
+        Checks if a post is recent (within max_hours).
+        Returns True if recent, False if old or unable to determine.
+        
+        Args:
+            post_element: The Selenium WebElement of the post/article
+            max_hours: Maximum age in hours (default 48 hours)
+        """
+        try:
+            # Try to find the timestamp element within the post
+            time_selectors = [
+                './/time',
+                './/*[@datetime]',
+                './/*[contains(@class, "time")]',
+            ]
+            
+            time_element = None
+            for selector in time_selectors:
+                try:
+                    time_element = post_element.find_element(By.XPATH, selector)
+                    break
+                except:
+                    continue
+            
+            if not time_element:
+                # Can't find timestamp, assume it's okay (benefit of doubt)
+                return True
+            
+            # Get the timestamp text (e.g., "2h", "45m", "3d")
+            time_text = time_element.text.lower().strip()
+            
+            # Also try datetime attribute
+            datetime_attr = time_element.get_attribute('datetime')
+            
+            if datetime_attr:
+                # Parse ISO datetime format
+                from datetime import datetime, timezone
+                post_time = datetime.fromisoformat(datetime_attr.replace('Z', '+00:00'))
+                current_time = datetime.now(timezone.utc)
+                hours_diff = (current_time - post_time).total_seconds() / 3600
+                
+                is_recent = hours_diff <= max_hours
+                if not is_recent:
+                    print(f"  ⏰ Skipping old post ({int(hours_diff)}h old)")
+                return is_recent
+            
+            # Parse relative time text (e.g., "2h", "45m", "3d")
+            if 'm' in time_text or 'min' in time_text:
+                # Minutes old - definitely recent
+                return True
+            elif 'h' in time_text or 'hour' in time_text:
+                # Extract hours
+                hours = int(''.join(filter(str.isdigit, time_text)))
+                is_recent = hours <= max_hours
+                if not is_recent:
+                    print(f"  ⏰ Skipping old post ({hours}h old)")
+                return is_recent
+            elif 'd' in time_text or 'day' in time_text:
+                # Days old
+                days = int(''.join(filter(str.isdigit, time_text)))
+                hours = days * 24
+                is_recent = hours <= max_hours
+                if not is_recent:
+                    print(f"  ⏰ Skipping old post ({days}d old)")
+                return is_recent
+            
+            # If we can't parse it, assume it's okay
+            return True
+            
+        except Exception as e:
+            # If error checking age, assume it's okay (don't skip)
+            return True
 
     def send_tweet(self, text=None):
         """
@@ -496,6 +570,19 @@ class TwitterBot:
                     if random.random() < 0.3:
                         self.driver.execute_script("window.scrollBy(0, 200);")
                         self._human_like_delay(1, 3)
+                    
+                    # Find the article/post element to check its age
+                    articles = self.driver.find_elements(By.CSS_SELECTOR, 'article[data-testid="tweet"]')
+                    if not articles:
+                        articles = self.driver.find_elements(By.TAG_NAME, 'article')
+                    
+                    if articles and len(articles) > 0:
+                        # Check if the first visible post is recent (within 48 hours)
+                        if not self._is_post_recent(articles[0], max_hours=48):
+                            # Skip this old post and scroll to next
+                            self.driver.execute_script("window.scrollBy(0, 400);")
+                            self._human_like_delay(2, 4)
+                            continue
                     
                     # Like the tweet - try multiple selector strategies
                     like_button = None
@@ -634,6 +721,19 @@ class TwitterBot:
                     if random.random() < 0.4:
                         self.driver.execute_script("window.scrollBy(0, 200);")
                         self._human_like_delay(1, 3)
+                    
+                    # Find the article/post element to check its age
+                    articles = self.driver.find_elements(By.CSS_SELECTOR, 'article[data-testid="tweet"]')
+                    if not articles:
+                        articles = self.driver.find_elements(By.TAG_NAME, 'article')
+                    
+                    if articles and len(articles) > 0:
+                        # Check if the post is recent (within 48 hours)
+                        if not self._is_post_recent(articles[0], max_hours=48):
+                            # Skip this old post and scroll to next
+                            self.driver.execute_script("window.scrollBy(0, 400);")
+                            self._human_like_delay(2, 4)
+                            continue
                     
                     # Get the current tweet text to check for hashtag
                     try:
