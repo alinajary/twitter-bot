@@ -367,7 +367,8 @@ class TwitterBot:
     def _is_post_recent(self, post_element, max_hours=48):
         """
         Checks if a post is recent (within max_hours).
-        Returns True if recent, False if old or unable to determine.
+        Returns True ONLY if verified recent, False if old OR unable to determine.
+        STRICT MODE: If we can't verify age, skip it (safer approach).
         
         Args:
             post_element: The Selenium WebElement of the post/article
@@ -390,53 +391,73 @@ class TwitterBot:
                     continue
             
             if not time_element:
-                # Can't find timestamp, assume it's okay (benefit of doubt)
-                return True
+                # Can't find timestamp - SKIP IT (strict mode)
+                print(f"  ⏰ Skipping post - no timestamp found")
+                return False
             
             # Get the timestamp text (e.g., "2h", "45m", "3d")
             time_text = time_element.text.lower().strip()
             
-            # Also try datetime attribute
+            # Also try datetime attribute (most reliable)
             datetime_attr = time_element.get_attribute('datetime')
             
             if datetime_attr:
                 # Parse ISO datetime format
                 from datetime import datetime, timezone
-                post_time = datetime.fromisoformat(datetime_attr.replace('Z', '+00:00'))
-                current_time = datetime.now(timezone.utc)
-                hours_diff = (current_time - post_time).total_seconds() / 3600
-                
-                is_recent = hours_diff <= max_hours
-                if not is_recent:
-                    print(f"  ⏰ Skipping old post ({int(hours_diff)}h old)")
-                return is_recent
+                try:
+                    post_time = datetime.fromisoformat(datetime_attr.replace('Z', '+00:00'))
+                    current_time = datetime.now(timezone.utc)
+                    hours_diff = (current_time - post_time).total_seconds() / 3600
+                    
+                    is_recent = hours_diff <= max_hours
+                    if not is_recent:
+                        print(f"  ⏰ Skipping old post ({int(hours_diff)}h = {int(hours_diff/24)}d old)")
+                    return is_recent
+                except Exception as e:
+                    # If datetime parsing fails, skip it
+                    print(f"  ⏰ Skipping post - couldn't parse datetime")
+                    return False
             
             # Parse relative time text (e.g., "2h", "45m", "3d")
+            if not time_text:
+                print(f"  ⏰ Skipping post - no time text")
+                return False
+                
             if 'm' in time_text or 'min' in time_text:
                 # Minutes old - definitely recent
                 return True
             elif 'h' in time_text or 'hour' in time_text:
                 # Extract hours
-                hours = int(''.join(filter(str.isdigit, time_text)))
-                is_recent = hours <= max_hours
-                if not is_recent:
-                    print(f"  ⏰ Skipping old post ({hours}h old)")
-                return is_recent
+                try:
+                    hours = int(''.join(filter(str.isdigit, time_text)))
+                    is_recent = hours <= max_hours
+                    if not is_recent:
+                        print(f"  ⏰ Skipping old post ({hours}h old)")
+                    return is_recent
+                except:
+                    print(f"  ⏰ Skipping post - couldn't parse hours from '{time_text}'")
+                    return False
             elif 'd' in time_text or 'day' in time_text:
                 # Days old
-                days = int(''.join(filter(str.isdigit, time_text)))
-                hours = days * 24
-                is_recent = hours <= max_hours
-                if not is_recent:
-                    print(f"  ⏰ Skipping old post ({days}d old)")
-                return is_recent
+                try:
+                    days = int(''.join(filter(str.isdigit, time_text)))
+                    hours = days * 24
+                    is_recent = hours <= max_hours
+                    if not is_recent:
+                        print(f"  ⏰ Skipping old post ({days}d old)")
+                    return is_recent
+                except:
+                    print(f"  ⏰ Skipping post - couldn't parse days from '{time_text}'")
+                    return False
             
-            # If we can't parse it, assume it's okay
-            return True
+            # If format is unknown, SKIP IT (strict mode)
+            print(f"  ⏰ Skipping post - unknown time format: '{time_text}'")
+            return False
             
         except Exception as e:
-            # If error checking age, assume it's okay (don't skip)
-            return True
+            # If ANY error checking age, SKIP IT (strict mode)
+            print(f"  ⏰ Skipping post - error checking age: {e}")
+            return False
 
     def send_tweet(self, text=None):
         """
