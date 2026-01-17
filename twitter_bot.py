@@ -522,6 +522,91 @@ class TwitterBot:
         print(f"✓ Filtered to {len(recent_tweets)} recent tweets (within {max_hours}h)")
         return recent_tweets
 
+    def _get_tweet_engagement(self, tweet_element):
+        """
+        Extract engagement metrics (likes, retweets) from a tweet.
+        
+        Args:
+            tweet_element: The tweet article WebElement
+        
+        Returns:
+            Tuple (likes_count, retweets_count) or (0, 0) if can't parse
+        """
+        try:
+            import re
+            # Find like button and extract count from aria-label
+            like_button = tweet_element.find_element(By.CSS_SELECTOR, 'button[data-testid="like"]')
+            like_label = like_button.get_attribute('aria-label') or ""
+            
+            likes = 0
+            if 'like' in like_label.lower():
+                numbers = re.findall(r'([\d,\.]+[KkMm]?)', like_label)
+                if numbers:
+                    num_str = numbers[0].replace(',', '')
+                    if 'K' in num_str or 'k' in num_str:
+                        likes = int(float(num_str.replace('K', '').replace('k', '')) * 1000)
+                    elif 'M' in num_str or 'm' in num_str:
+                        likes = int(float(num_str.replace('M', '').replace('m', '')) * 1000000)
+                    else:
+                        likes = int(float(num_str))
+            
+            # Find retweet button and extract count
+            retweet_button = tweet_element.find_element(By.CSS_SELECTOR, 'button[data-testid="retweet"]')
+            retweet_label = retweet_button.get_attribute('aria-label') or ""
+            
+            retweets = 0
+            if 'retweet' in retweet_label.lower() or 'repost' in retweet_label.lower():
+                numbers = re.findall(r'([\d,\.]+[KkMm]?)', retweet_label)
+                if numbers:
+                    num_str = numbers[0].replace(',', '')
+                    if 'K' in num_str or 'k' in num_str:
+                        retweets = int(float(num_str.replace('K', '').replace('k', '')) * 1000)
+                    elif 'M' in num_str or 'm' in num_str:
+                        retweets = int(float(num_str.replace('M', '').replace('m', '')) * 1000000)
+                    else:
+                        retweets = int(float(num_str))
+            
+            return (likes, retweets)
+        except:
+            return (0, 0)
+
+    def _sort_by_engagement(self, tweet_elements, min_likes=0, min_retweets=0):
+        """
+        Sort tweets by engagement and filter by minimum thresholds.
+        
+        Args:
+            tweet_elements: List of article WebElements
+            min_likes: Minimum likes required
+            min_retweets: Minimum retweets required
+        
+        Returns:
+            List of tweets sorted by engagement
+        """
+        tweet_data = []
+        for tweet in tweet_elements:
+            likes, retweets = self._get_tweet_engagement(tweet)
+            total_engagement = likes + (retweets * 2)
+            
+            if likes >= min_likes and retweets >= min_retweets:
+                tweet_data.append({
+                    'element': tweet,
+                    'likes': likes,
+                    'retweets': retweets,
+                    'engagement': total_engagement
+                })
+        
+        tweet_data.sort(key=lambda x: x['engagement'], reverse=True)
+        
+        if tweet_data:
+            print(f"\n📊 Engagement Stats:")
+            for i, data in enumerate(tweet_data[:5], 1):
+                print(f"  #{i}: {data['likes']} likes, {data['retweets']} retweets (score: {data['engagement']})")
+            
+            if min_likes > 0 or min_retweets > 0:
+                print(f"✓ Filtered to {len(tweet_data)} tweets with ≥{min_likes} likes, ≥{min_retweets} retweets")
+        
+        return [data['element'] for data in tweet_data]
+
     # High-quality Iranian activist accounts to monitor
     TARGET_ACCOUNTS = [
         "PahlaviReza",          # Reza Pahlavi - Crown Prince
@@ -744,15 +829,8 @@ class TwitterBot:
                 print(f"⚠ No recent tweets found for #{hashtag}")
                 return
             
-            # Sort by engagement and filter (minimum 10 likes, 5 retweets)
-            high_engagement_tweets = self._sort_by_engagement(recent_tweets, min_likes=10, min_retweets=5)
-            
-            # If too few high-engagement tweets, use all recent tweets
-            if len(high_engagement_tweets) < limit // 2:
-                print(f"⚠ Only {len(high_engagement_tweets)} high-engagement tweets, using all recent tweets")
-                tweets_to_interact = recent_tweets[:limit]
-            else:
-                tweets_to_interact = high_engagement_tweets[:limit]
+            # Temporarily disable engagement filtering for testing
+            tweets_to_interact = recent_tweets[:limit]
             print(f"\n👍 Will interact with {len(tweets_to_interact)} tweets for #{hashtag}\n")
 
             # Interact with each tweet in the batch
