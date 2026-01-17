@@ -905,8 +905,43 @@ class TwitterBot:
                 print(f"⚠ No recent tweets found for #{hashtag}")
                 return
             
-            # Temporarily disable engagement filtering for testing
-            tweets_to_interact = recent_tweets[:limit]
+            # Filter tweets by content quality
+            quality_tweets = []
+            for tweet in recent_tweets:
+                if self._has_meaningful_content(tweet):
+                    quality_tweets.append(tweet)
+            
+            if not quality_tweets:
+                print(f"⚠ No tweets with meaningful content found for #{hashtag}")
+                return
+            
+            print(f"✓ Found {len(quality_tweets)} tweets with meaningful content (from {len(recent_tweets)} recent)")
+            
+            # Sort by engagement - prioritize high-engagement tweets
+            high_engagement = self._sort_by_engagement(quality_tweets, min_likes=10, min_retweets=5)
+            medium_engagement = self._sort_by_engagement(quality_tweets, min_likes=2, min_retweets=1)
+            
+            # Build final list: prefer high engagement, fall back to medium if needed
+            tweets_to_interact = []
+            
+            if high_engagement:
+                print(f"🔥 Found {len(high_engagement)} high-engagement tweets (≥10 likes or ≥5 retweets)")
+                tweets_to_interact = high_engagement[:limit]
+            
+            if len(tweets_to_interact) < limit and medium_engagement:
+                remaining = limit - len(tweets_to_interact)
+                # Add medium engagement tweets, avoiding duplicates
+                for tweet in medium_engagement:
+                    if tweet not in tweets_to_interact:
+                        tweets_to_interact.append(tweet)
+                        if len(tweets_to_interact) >= limit:
+                            break
+                print(f"📊 Added {len(tweets_to_interact) - len(high_engagement)} medium-engagement tweets (≥2 likes or ≥1 retweet)")
+            
+            if not tweets_to_interact:
+                print(f"⚠ No tweets meet minimum engagement criteria for #{hashtag}")
+                return
+            
             print(f"\n👍 Will interact with {len(tweets_to_interact)} tweets for #{hashtag}\n")
 
             # Interact with each tweet in the batch
@@ -915,16 +950,6 @@ class TwitterBot:
                     # Scroll tweet into view
                     self.driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", tweet_element)
                     self._human_like_delay(1, 2)
-                    
-                    # Check if tweet has meaningful content
-                    if not self._has_meaningful_content(tweet_element):
-                        print(f"⏭ Skipping tweet #{i} - no meaningful content (only hashtags/links)")
-                        continue
-                    
-                    # Check if tweet has minimum engagement
-                    if not self._has_minimum_engagement(tweet_element, min_likes=2, min_retweets=1):
-                        print(f"⏭ Skipping tweet #{i} - low engagement (less than 2 likes or 1 retweet)")
-                        continue
                     
                     # Find like button within this specific tweet
                     like_button = None
@@ -1059,27 +1084,43 @@ class TwitterBot:
                         print(f"  No recent tweets from @{account}")
                         continue
                     
-                    # Check which tweets contain our hashtag
+                    # Filter by hashtag and quality
+                    matching_tweets = []
                     for tweet in recent_tweets:
+                        try:
+                            tweet_text = tweet.text.lower()
+                            if random_hashtag_filter.lower() in tweet_text and self._has_meaningful_content(tweet):
+                                matching_tweets.append(tweet)
+                        except:
+                            continue
+                    
+                    if not matching_tweets:
+                        print(f"  No quality tweets with #{random_hashtag_filter} from @{account}")
+                        continue
+                    
+                    # Sort by engagement - prefer high-engagement tweets
+                    high_engagement = self._sort_by_engagement(matching_tweets, min_likes=10, min_retweets=5)
+                    medium_engagement = self._sort_by_engagement(matching_tweets, min_likes=2, min_retweets=1)
+                    
+                    # Prioritize high engagement
+                    tweets_to_retweet = high_engagement if high_engagement else medium_engagement
+                    
+                    if not tweets_to_retweet:
+                        print(f"  No tweets meet engagement criteria from @{account}")
+                        continue
+                    
+                    # Check which tweets contain our hashtag
+                    for tweet in tweets_to_retweet:
                         if retweet_count >= limit:
                             break
                         
                         try:
-                            tweet_text = tweet.text.lower()
-                            if random_hashtag_filter.lower() not in tweet_text:
-                                continue
-                            
-                            # Check if tweet has meaningful content
-                            if not self._has_meaningful_content(tweet):
-                                print(f"  ⏭ Skipping @{account} tweet - no meaningful content")
-                                continue
+                            print(f"  ✓ Found quality tweet from @{account}")
                             
                             # Check if tweet has minimum engagement
                             if not self._has_minimum_engagement(tweet, min_likes=2, min_retweets=1):
                                 print(f"  ⏭ Skipping @{account} tweet - low engagement")
                                 continue
-                            
-                            print(f"  ✓ Found quality matching tweet from @{account}")
                             
                             # Find retweet button
                             retweet_button = None
@@ -1154,37 +1195,54 @@ class TwitterBot:
                 print(f"⚠ No recent tweets found in home feed")
                 return
             
-            retweet_count = 0
-            posts_checked = 0
+            # Filter by hashtag and quality
+            matching_tweets = []
+            for tweet in recent_tweets:
+                try:
+                    tweet_text = tweet.text.lower()
+                    if random_hashtag_filter.lower() in tweet_text and self._has_meaningful_content(tweet):
+                        matching_tweets.append(tweet)
+                except:
+                    continue
             
-            for tweet_element in recent_tweets:
+            if not matching_tweets:
+                print(f"⚠ No quality tweets with #{random_hashtag_filter} in home feed")
+                return
+            
+            print(f"✓ Found {len(matching_tweets)} quality tweets with #{random_hashtag_filter}")
+            
+            # Sort by engagement - prefer high-engagement tweets
+            high_engagement = self._sort_by_engagement(matching_tweets, min_likes=10, min_retweets=5)
+            medium_engagement = self._sort_by_engagement(matching_tweets, min_likes=2, min_retweets=1)
+            
+            # Build final list: prefer high engagement, fall back to medium if needed
+            tweets_to_retweet = []
+            
+            if high_engagement:
+                tweets_to_retweet = high_engagement[:limit]
+            
+            if len(tweets_to_retweet) < limit and medium_engagement:
+                for tweet in medium_engagement:
+                    if tweet not in tweets_to_retweet:
+                        tweets_to_retweet.append(tweet)
+                        if len(tweets_to_retweet) >= limit:
+                            break
+            
+            if not tweets_to_retweet:
+                print(f"⚠ No tweets meet engagement criteria in home feed")
+                return
+            
+            print(f"🎯 Will retweet {len(tweets_to_retweet)} tweets from home feed\n")
+            
+            retweet_count = 0
+            
+            for i, tweet_element in enumerate(tweets_to_retweet, 1):
                 if retweet_count >= limit:
                     break
                 
-                posts_checked += 1
-                print(f"Checking post #{posts_checked}")
-
                 try:
-                    # Get tweet text from this specific tweet element
-                    tweet_text = tweet_element.text.lower()
-                    
-                    # Check if the tweet contains the target hashtag
-                    if random_hashtag_filter.lower() not in tweet_text:
-                        print(f"  Post #{posts_checked} doesn't contain #{random_hashtag_filter}, skipping...")
-                        continue
-                    
-                    # Check if tweet has meaningful content
-                    if not self._has_meaningful_content(tweet_element):
-                        print(f"  ⏭ Skipping post #{posts_checked} - no meaningful content")
-                        continue
-                    
-                    # Check if tweet has minimum engagement
-                    if not self._has_minimum_engagement(tweet_element, min_likes=2, min_retweets=1):
-                        print(f"  ⏭ Skipping post #{posts_checked} - low engagement")
-                        continue
-                    
-                    print(f"  ✓ Found quality tweet with #{random_hashtag_filter}")
-                    
+                    print(f"Retweeting post #{i}/{len(tweets_to_retweet)}")
+
                     # Find retweet button within this tweet
                     retweet_button = None
                     try:
