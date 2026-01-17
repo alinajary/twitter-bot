@@ -110,7 +110,10 @@ class TwitterBot:
                 print("✓ Successfully started undetected Chrome with virtual display!")
                 
                 # Load cookies from file and inject them
-                cookie_file = os.path.join(os.path.dirname(__file__), 'twitter_cookies.json')
+                # Prefer live cookies from previous successful logins
+                live_cookie_file = os.path.join(os.path.dirname(__file__), 'twitter_cookies_live.json')
+                cookie_file = live_cookie_file if os.path.exists(live_cookie_file) else os.path.join(os.path.dirname(__file__), 'twitter_cookies.json')
+                
                 if os.path.exists(cookie_file):
                     print("Loading authentication cookies...")
                     import json
@@ -222,6 +225,21 @@ class TwitterBot:
             print("2. Press ENTER here once you're logged in...")
             print("="*70 + "\n")
             input("Press ENTER once logged into X...")
+        
+        # Save cookies after successful manual login for future automated runs
+        if (sys.platform == "linux" or sys.platform == "linux2") and UC_AVAILABLE:
+            print("\nSaving session cookies for future automated runs...")
+            try:
+                import json
+                # Get all cookies from the browser
+                cookies = self.driver.get_cookies()
+                cookie_file = os.path.join(os.path.dirname(__file__), 'twitter_cookies_live.json')
+                with open(cookie_file, 'w') as f:
+                    json.dump(cookies, f, indent=2)
+                print(f"✓ Saved {len(cookies)} cookies to twitter_cookies_live.json")
+                print("  Next run will be fully automated!\n")
+            except Exception as e:
+                print(f"⚠ Could not save cookies: {e}\n")
         
         print("✓ Ready to start automation!")
         print("="*70 + "\n")
