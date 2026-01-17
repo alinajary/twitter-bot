@@ -1,4 +1,3 @@
-Iran
 FreeIran
 Pahlavi
 IranianRevolution
@@ -10,3 +9,4 @@ IranProtests
 IranRevolution2026
 DigitalBlackoutIran
 KingRezaPahlavi
+IranMassacre
