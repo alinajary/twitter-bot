@@ -459,6 +459,81 @@ class TwitterBot:
             print(f"  ⏰ Skipping post - error checking age: {e}")
             return False
 
+    def _get_batch_tweets(self, max_scroll=5, target_count=20):
+        """
+        Batch collection: Scroll to load multiple tweets, then return all article elements.
+        Much faster than one-by-one approach.
+        
+        Args:
+            max_scroll: Maximum number of scrolls to perform
+            target_count: Target number of tweets to collect
+        
+        Returns:
+            List of article WebElements
+        """
+        print(f"📦 Collecting batch of tweets (target: {target_count})...")
+        tweets_collected = set()
+        
+        for scroll in range(max_scroll):
+            # Find all article elements
+            articles = self.driver.find_elements(By.CSS_SELECTOR, 'article[data-testid="tweet"]')
+            
+            # Add new articles to set (using element ID to avoid duplicates)
+            for article in articles:
+                try:
+                    article_id = article.get_attribute('innerHTML')[:100]  # Use partial HTML as ID
+                    tweets_collected.add((article_id, article))
+                except:
+                    continue
+            
+            current_count = len(tweets_collected)
+            print(f"  Scroll {scroll+1}/{max_scroll}: {current_count} tweets collected")
+            
+            if current_count >= target_count:
+                break
+            
+            # Scroll down
+            scroll_amount = random.randint(600, 1000)
+            self.driver.execute_script(f"window.scrollBy(0, {scroll_amount});")
+            self._human_like_delay(2, 4)
+        
+        # Extract just the WebElements
+        tweet_elements = [article for _, article in tweets_collected]
+        print(f"✓ Collected {len(tweet_elements)} total tweets")
+        return tweet_elements
+
+    def _filter_recent_tweets(self, tweet_elements, max_hours=48):
+        """
+        Filter tweets to only include recent ones.
+        
+        Args:
+            tweet_elements: List of article WebElements
+            max_hours: Maximum age in hours
+        
+        Returns:
+            List of recent tweet WebElements
+        """
+        recent_tweets = []
+        for tweet in tweet_elements:
+            if self._is_post_recent(tweet, max_hours=max_hours):
+                recent_tweets.append(tweet)
+        
+        print(f"✓ Filtered to {len(recent_tweets)} recent tweets (within {max_hours}h)")
+        return recent_tweets
+
+    # High-quality Iranian activist accounts to monitor
+    TARGET_ACCOUNTS = [
+        "PahlaviReza",          # Reza Pahlavi - Crown Prince
+        "IranIntl_En",          # Iran International English
+        "IranIntl",             # Iran International Persian  
+        "manoto_news",          # Manoto News
+        "AlinejadMasih",        # Masih Alinejad - Activist
+        "AliKarimi_AKA",        # Ali Karimi - Football legend
+        "nahidtv",              # Nahid TV
+        "VOAIran",              # Voice of America Persian
+        "bbcpersian",           # BBC Persian
+    ]
+
     def send_tweet(self, text=None):
         """
         Posts a new tweet.
@@ -572,118 +647,165 @@ class TwitterBot:
             import traceback
             traceback.print_exc()
 
+    def _get_batch_tweets(self, max_scroll=5, target_count=20):
+        """
+        Batch collection: Scroll to load multiple tweets, then return all article elements.
+        Much faster than one-by-one approach.
+        
+        Args:
+            max_scroll: Maximum number of scrolls to perform
+            target_count: Target number of tweets to collect
+        
+        Returns:
+            List of article WebElements
+        """
+        print(f"📦 Collecting batch of tweets (target: {target_count})...")
+        tweets_collected = set()
+        
+        for scroll in range(max_scroll):
+            # Find all article elements
+            articles = self.driver.find_elements(By.CSS_SELECTOR, 'article[data-testid="tweet"]')
+            
+            # Add new articles to set (using element ID to avoid duplicates)
+            for article in articles:
+                try:
+                    article_id = article.get_attribute('innerHTML')[:100]  # Use partial HTML as ID
+                    tweets_collected.add((article_id, article))
+                except:
+                    continue
+            
+            current_count = len(tweets_collected)
+            print(f"  Scroll {scroll+1}/{max_scroll}: {current_count} tweets collected")
+            
+            if current_count >= target_count:
+                break
+            
+            # Scroll down
+            scroll_amount = random.randint(600, 1000)
+            self.driver.execute_script(f"window.scrollBy(0, {scroll_amount});")
+            self._human_like_delay(2, 4)
+        
+        # Extract just the WebElements
+        tweet_elements = [article for _, article in tweets_collected]
+        print(f"✓ Collected {len(tweet_elements)} total tweets")
+        return tweet_elements
+
+    def _filter_recent_tweets(self, tweet_elements, max_hours=48):
+        """
+        Filter tweets to only include recent ones.
+        
+        Args:
+            tweet_elements: List of article WebElements
+            max_hours: Maximum age in hours
+        
+        Returns:
+            List of recent tweet WebElements
+        """
+        recent_tweets = []
+        for tweet in tweet_elements:
+            if self._is_post_recent(tweet, max_hours=max_hours):
+                recent_tweets.append(tweet)
+        
+        print(f"✓ Filtered to {len(recent_tweets)} recent tweets (within {max_hours}h)")
+        return recent_tweets
+
     def interact_with_hashtag(self, hashtag, limit=10):
         """
         Searches for a hashtag, then likes and retweets a specific number of posts.
+        Now uses batch collection + filtering for efficiency.
 
         Args:
             hashtag (str): The hashtag to search for (without the '#').
             limit (int): The maximum number of posts to interact with.
         """
         try:
-            search_url = f"https://x.com/search?q={hashtag}&src=typed_query"
+            # Use f=live filter for latest tweets only
+            search_url = f"https://x.com/search?q=%23{hashtag}&f=live"
+            print(f"\n🔍 Searching for #{hashtag} (latest tweets only)...")
             self.driver.get(search_url)
             self._human_like_delay(3, 5)
+            
+            # Batch collect tweets
+            all_tweets = self._get_batch_tweets(max_scroll=5, target_count=limit*3)
+            
+            # Filter to recent only
+            recent_tweets = self._filter_recent_tweets(all_tweets, max_hours=48)
+            
+            if not recent_tweets:
+                print(f"⚠ No recent tweets found for #{hashtag}")
+                return
+            
+            # Limit to requested number
+            tweets_to_interact = recent_tweets[:limit]
+            print(f"\n👍 Will interact with {len(tweets_to_interact)} tweets for #{hashtag}\n")
 
-            for i in range(limit):
+            # Interact with each tweet in the batch
+            for i, tweet_element in enumerate(tweets_to_interact, 1):
                 try:
-                    # Random chance to scroll before liking (human behavior)
-                    if random.random() < 0.3:
-                        self.driver.execute_script("window.scrollBy(0, 200);")
-                        self._human_like_delay(1, 3)
+                    # Scroll tweet into view
+                    self.driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", tweet_element)
+                    self._human_like_delay(1, 2)
                     
-                    # Like the tweet - try multiple selector strategies
+                    # Find like button within this specific tweet
                     like_button = None
                     like_selectors = [
                         'button[data-testid="like"]',
                         '[data-testid="like"]',
                         'button[aria-label*="Like"]',
-                        'div[data-testid="like"]',
                     ]
                     
                     for selector in like_selectors:
                         try:
-                            like_button = self.wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, selector)))
-                            print(f"Found like button with selector: {selector}")
+                            like_button = tweet_element.find_element(By.CSS_SELECTOR, selector)
                             break
                         except:
                             continue
                     
                     if not like_button:
-                        print(f"Could not find like button for tweet #{i+1}")
-                        self.driver.execute_script("window.scrollBy(0, 300);")
-                        self._human_like_delay(2, 4)
+                        print(f"  Could not find like button for tweet #{i}")
                         continue
                     
-                    # Find the parent article/post element of this like button to check its age
-                    try:
-                        post_element = like_button.find_element(By.XPATH, './ancestor::article')
-                        if not self._is_post_recent(post_element, max_hours=48):
-                            # Skip this old post and scroll to next
-                            print(f"  Skipping tweet #{i+1} - too old")
-                            self.driver.execute_script("window.scrollBy(0, 400);")
-                            self._human_like_delay(2, 4)
-                            continue
-                    except Exception as e:
-                        # If we can't find parent article or check age, proceed anyway
-                        pass
-                    
-                    # Scroll element into view
-                    self.driver.execute_script("arguments[0].scrollIntoView(true);", like_button)
-                    self._human_like_delay(1, 2)
-                    # Use JavaScript click to avoid interception
+                    # Click like button
                     self.driver.execute_script("arguments[0].click();", like_button)
-                    print(f"✓ Liked tweet #{i+1} for hashtag '{hashtag}'")
+                    print(f"✓ Liked tweet #{i} for hashtag '{hashtag}'")
                     self._human_like_delay(2, 5)
 
                     # Random chance to skip retweet (more human-like)
                     if random.random() < 0.9:
-                        # Retweet the tweet
+                        # Find retweet button within this specific tweet
                         retweet_button = None
                         retweet_selectors = [
                             'button[data-testid="retweet"]',
                             '[data-testid="retweet"]',
                             'button[aria-label*="Retweet"]',
-                            'div[data-testid="retweet"]',
                         ]
                         
                         for selector in retweet_selectors:
                             try:
-                                retweet_button = self.wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, selector)))
-                                print(f"Found retweet button with selector: {selector}")
+                                retweet_button = tweet_element.find_element(By.CSS_SELECTOR, selector)
                                 break
                             except:
                                 continue
                         
                         if not retweet_button:
-                            print(f"Could not find retweet button for tweet #{i+1}")
-                            self.driver.execute_script("window.scrollBy(0, 300);")
-                            self._human_like_delay(2, 4)
+                            print(f"  Could not find retweet button for tweet #{i}")
                         else:
-                            # Scroll element into view
-                            self.driver.execute_script("arguments[0].scrollIntoView(true);", retweet_button)
-                            self._human_like_delay(1, 2)
-                            # Use JavaScript click to avoid interception
+                            # Click retweet
                             self.driver.execute_script("arguments[0].click();", retweet_button)
-                            self._human_like_delay(2, 4)
+                            self._human_like_delay(2, 3)
                             
-                            # Confirm retweet - try multiple selectors and give more time
+                            # Confirm retweet
                             confirm_selectors = [
                                 'button[data-testid="retweetConfirm"]',
-                                'button[data-testid="confirmationSheetConfirm"]',
                                 '[data-testid="retweetConfirm"]',
-                                'button:has-text("Retweet")',
-                                'div[role="dialog"] button[data-testid*="Confirm"]',
                             ]
                             
                             confirm_retweet = None
                             for selector in confirm_selectors:
                                 try:
-                                    # Wait longer for dialog to appear
                                     confirm_retweet = WebDriverWait(self.driver, 5).until(
                                         EC.element_to_be_clickable((By.CSS_SELECTOR, selector))
                                     )
-                                    print(f"Found confirm button with selector: {selector}")
                                     break
                                 except:
                                     continue
@@ -691,20 +813,15 @@ class TwitterBot:
                             if confirm_retweet:
                                 try:
                                     confirm_retweet.click()
-                                    print(f"✓ Retweeted tweet #{i+1} for hashtag '{hashtag}'")
+                                    print(f"✓ Retweeted tweet #{i} for hashtag '{hashtag}'")
                                 except:
-                                    # Try JavaScript click as fallback
                                     self.driver.execute_script("arguments[0].click();", confirm_retweet)
-                                    print(f"✓ Retweeted tweet #{i+1} for hashtag '{hashtag}'")
-                            else:
-                                print(f"Could not confirm retweet for tweet #{i+1} - dialog didn't appear")
+                                    print(f"✓ Retweeted tweet #{i} for hashtag '{hashtag}'")
                             
-                            self._human_like_delay(2, 5)
-
-                    # Scroll down to the next tweet with variable distance
-                    scroll_amount = random.randint(400, 800)
-                    self.driver.execute_script(f"window.scrollBy(0, {scroll_amount});")
-                    self._human_like_delay(3, 7)
+                            self._human_like_delay(2, 4)
+                    
+                    # Small delay between tweets
+                    self._human_like_delay(2, 4)
 
                 except Exception as e:
                     print(f"Could not interact with tweet #{i+1}: {e}")
@@ -713,142 +830,193 @@ class TwitterBot:
         except Exception as e:
             print(f"Error interacting with hashtag {hashtag}: {e}")
 
+    # High-quality Iranian activist accounts to monitor
+    TARGET_ACCOUNTS = [
+        "PahlaviReza",          # Reza Pahlavi - Crown Prince
+        "IranIntl_En",          # Iran International English
+        "IranIntl",             # Iran International Persian  
+        "manoto_news",          # Manoto News
+        "AlinejadMasih",        # Masih Alinejad - Activist
+        "AliKarimi_AKA",        # Ali Karimi - Football legend
+        "nahidtv",              # Nahid TV
+        "VOAIran",              # Voice of America Persian
+        "bbcpersian",           # BBC Persian
+    ]
+
+    def retweet_from_target_accounts(self, limit=5):
+        """
+        Retweets recent posts from high-quality targeted accounts.
+        More reliable than random home feed scanning.
+        
+        Args:
+            limit (int): Maximum number of posts to retweet
+        """
+        try:
+            random_hashtag_filter = self._get_random_hashtag()
+            print(f"\n🎯 Targeting specific accounts with hashtag filter: #{random_hashtag_filter}\n")
+            
+            retweet_count = 0
+            # Randomly select 3-4 accounts to check
+            accounts_to_check = random.sample(self.TARGET_ACCOUNTS, min(4, len(self.TARGET_ACCOUNTS)))
+            
+            for account in accounts_to_check:
+                if retweet_count >= limit:
+                    break
+                
+                try:
+                    # Visit account profile
+                    print(f"\n📱 Checking @{account}...")
+                    self.driver.get(f"https://x.com/{account}")
+                    self._human_like_delay(3, 5)
+                    
+                    # Batch collect their recent tweets
+                    all_tweets = self._get_batch_tweets(max_scroll=3, target_count=10)
+                    
+                    # Filter to recent only
+                    recent_tweets = self._filter_recent_tweets(all_tweets, max_hours=48)
+                    
+                    if not recent_tweets:
+                        print(f"  No recent tweets from @{account}")
+                        continue
+                    
+                    # Check which tweets contain our hashtag
+                    for tweet in recent_tweets:
+                        if retweet_count >= limit:
+                            break
+                        
+                        try:
+                            tweet_text = tweet.text.lower()
+                            if random_hashtag_filter.lower() not in tweet_text:
+                                continue
+                            
+                            print(f"  ✓ Found matching tweet from @{account}")
+                            
+                            # Find retweet button
+                            retweet_button = None
+                            try:
+                                retweet_button = tweet.find_element(By.CSS_SELECTOR, 'button[data-testid="retweet"]')
+                            except:
+                                continue
+                            
+                            # Scroll into view
+                            self.driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", tweet)
+                            self._human_like_delay(1, 2)
+                            
+                            # Click retweet
+                            self.driver.execute_script("arguments[0].click();", retweet_button)
+                            self._human_like_delay(2, 3)
+                            
+                            # Confirm retweet
+                            try:
+                                confirm_button = WebDriverWait(self.driver, 5).until(
+                                    EC.element_to_be_clickable((By.CSS_SELECTOR, 'button[data-testid="retweetConfirm"]'))
+                                )
+                                confirm_button.click()
+                                retweet_count += 1
+                                print(f"✓ Retweeted post from @{account} (#{retweet_count})")
+                                self._human_like_delay(3, 6)
+                            except:
+                                print(f"  Could not confirm retweet from @{account}")
+                                
+                        except Exception as e:
+                            print(f"  Error processing tweet from @{account}: {e}")
+                            continue
+                    
+                except Exception as e:
+                    print(f"Error checking account @{account}: {e}")
+                    continue
+            
+            print(f"\n✓ Retweeted {retweet_count} posts from targeted accounts\n")
+            
+        except Exception as e:
+            print(f"Error in retweet_from_target_accounts: {e}")
+
     def retweet_from_followings(self, limit=10):
         """
         Retweets posts from your followings that contain a random hashtag.
+        Now uses batch collection and optionally targets specific high-quality accounts.
 
         Args:
             limit (int): The maximum number of posts to retweet.
         """
         try:
-            # Go to home feed
+            # 70% chance to use targeted accounts, 30% use home feed
+            if random.random() < 0.7:
+                print("📊 Using targeted account strategy")
+                self.retweet_from_target_accounts(limit=limit)
+                return
+            
+            # Otherwise use home feed
+            print("📊 Using home feed strategy")
+            random_hashtag_filter = self._get_random_hashtag()
+            print(f"\n🏠 Checking home feed with hashtag filter: #{random_hashtag_filter}\n")
+            
             self.driver.get("https://x.com/home")
             self._human_like_delay(3, 5)
-
+            
+            # Batch collect tweets from home feed
+            all_tweets = self._get_batch_tweets(max_scroll=5, target_count=limit*3)
+            
+            # Filter to recent only
+            recent_tweets = self._filter_recent_tweets(all_tweets, max_hours=48)
+            
+            if not recent_tweets:
+                print(f"⚠ No recent tweets found in home feed")
+                return
+            
             retweet_count = 0
             posts_checked = 0
-            for i in range(limit * 5):  # Try more times to find posts
+            
+            for tweet_element in recent_tweets:
                 if retweet_count >= limit:
                     break
                 
                 posts_checked += 1
-                
-                # Select a new random hashtag for each post
-                random_hashtag_filter = self._get_random_hashtag()
-                print(f"Checking post #{posts_checked} with hashtag filter: #{random_hashtag_filter}")
+                print(f"Checking post #{posts_checked}")
 
                 try:
-                    # Random chance to scroll before retweeting
-                    if random.random() < 0.4:
-                        self.driver.execute_script("window.scrollBy(0, 200);")
-                        self._human_like_delay(1, 3)
-                    
-                    # Find retweet buttons first to locate the specific post
-                    retweet_selectors = [
-                        'button[data-testid="retweet"]',
-                        '[data-testid="retweet"]',
-                        'button[aria-label*="Retweet"]',
-                    ]
-                    
-                    retweet_button = None
-                    for selector in retweet_selectors:
-                        try:
-                            retweet_button = self.wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, selector)))
-                            break
-                        except:
-                            continue
-                    
-                    if not retweet_button:
-                        self.driver.execute_script("window.scrollBy(0, 300);")
-                        self._human_like_delay(2, 4)
-                        continue
-                    
-                    # Find the parent article of this retweet button to check its age and content
-                    try:
-                        post_element = retweet_button.find_element(By.XPATH, './ancestor::article')
-                        
-                        # Check if the post is recent (within 48 hours)
-                        if not self._is_post_recent(post_element, max_hours=48):
-                            print(f"  Skipping post #{posts_checked} - too old")
-                            self.driver.execute_script("window.scrollBy(0, 400);")
-                            self._human_like_delay(2, 4)
-                            continue
-                        
-                        # Get tweet text from this specific post element
-                        tweet_text = post_element.text
-                    except Exception as e:
-                        # Fallback to old method if can't find parent
-                        try:
-                            tweet_text = self.driver.execute_script("""
-                                const tweet = document.querySelector('[data-testid="tweet"]');
-                                if (tweet) {
-                                    return tweet.innerText;
-                                }
-                                return '';
-                            """)
-                        except:
-                            tweet_text = ""
+                    # Get tweet text from this specific tweet element
+                    tweet_text = tweet_element.text.lower()
                     
                     # Check if the tweet contains the target hashtag
-                    if random_hashtag_filter.lower() not in tweet_text.lower():
-                        print(f"Post #{posts_checked} doesn't contain #{random_hashtag_filter}, skipping...")
-                        self.driver.execute_script("window.scrollBy(0, 300);")
-                        self._human_like_delay(2, 4)
+                    if random_hashtag_filter.lower() not in tweet_text:
+                        print(f"  Post #{posts_checked} doesn't contain #{random_hashtag_filter}, skipping...")
                         continue
                     
-                    # We already found retweet_button earlier, just verify it still exists
-                    if not retweet_button:
-                        print(f"No more posts found, stopping.")
-                        break
+                    print(f"  ✓ Found matching tweet with #{random_hashtag_filter}")
                     
-                    # Check if the post is already retweeted (skip if already retweeted)
-                    retweet_label = retweet_button.get_attribute('aria-label')
-                    if retweet_label and 'Undo' in retweet_label:
-                        print(f"Post #{posts_checked} already retweeted, skipping...")
-                        self.driver.execute_script("window.scrollBy(0, 300);")
-                        self._human_like_delay(2, 4)
+                    # Find retweet button within this tweet
+                    retweet_button = None
+                    try:
+                        retweet_button = tweet_element.find_element(By.CSS_SELECTOR, 'button[data-testid="retweet"]')
+                    except:
+                        print(f"  Could not find retweet button")
                         continue
                     
-                    # Scroll element into view
-                    self.driver.execute_script("arguments[0].scrollIntoView(true);", retweet_button)
+                    # Scroll into view
+                    self.driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", tweet_element)
                     self._human_like_delay(1, 2)
                     
-                    # Use JavaScript click to avoid interception
+                    # Click retweet
                     self.driver.execute_script("arguments[0].click();", retweet_button)
-                    self._human_like_delay(1, 3)
+                    self._human_like_delay(2, 3)
                     
                     # Confirm retweet
                     try:
-                        confirm_selectors = [
-                            '[data-testid="retweetConfirm"]',
-                            'button[data-testid="retweetConfirm"]',
-                        ]
-                        confirm_retweet = None
-                        for selector in confirm_selectors:
-                            try:
-                                confirm_retweet = self.wait.until(EC.element_to_be_clickable((By.CSS_SELECTOR, selector)))
-                                break
-                            except:
-                                continue
-                        
-                        if confirm_retweet:
-                            confirm_retweet.click()
-                            print(f"✓ Retweeted from followings #{retweet_count + 1} (with #{hashtag_filter})")
-                            retweet_count += 1
+                        confirm_button = WebDriverWait(self.driver, 5).until(
+                            EC.element_to_be_clickable((By.CSS_SELECTOR, 'button[data-testid="retweetConfirm"]'))
+                        )
+                        confirm_button.click()
+                        retweet_count += 1
+                        print(f"✓ Retweeted from followings #{retweet_count} (with #{random_hashtag_filter})")
+                        self._human_like_delay(3, 6)
                     except:
-                        print(f"Could not confirm retweet #{retweet_count + 1}")
-                    
-                    self._human_like_delay(3, 6)
-
-                    # Scroll down to the next tweet
-                    scroll_amount = random.randint(400, 800)
-                    self.driver.execute_script(f"window.scrollBy(0, {scroll_amount});")
-                    self._human_like_delay(3, 7)
+                        print(f"  Could not confirm retweet")
 
                 except Exception as e:
                     print(f"Error processing post #{posts_checked}: {e}")
-                    self.driver.execute_script("window.scrollBy(0, 300);")
-                    self._human_like_delay(2, 4)
+            
+            print(f"\n✓ Retweeted {retweet_count} posts from home feed\n")
                     
         except Exception as e:
             print(f"Error retweeting from followings: {e}")
