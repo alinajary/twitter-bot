@@ -546,8 +546,9 @@ class TwitterBot:
         if text is None:
             text = self._get_random_tweet()
         
-        # Add random hashtags to the tweet (always 3 hashtags with newlines before them)
-        random_hashtags = random.sample(self.hashtags, min(3, len(self.hashtags)))
+        # Randomly select 2-4 hashtags (more natural variation)
+        num_hashtags = random.randint(2, min(4, len(self.hashtags)))
+        random_hashtags = random.sample(self.hashtags, num_hashtags)
         hashtag_string = " ".join([f"#{tag}" for tag in random_hashtags])
         full_tweet = f"{text}\n\n{hashtag_string}"
         
