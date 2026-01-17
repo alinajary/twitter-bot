@@ -324,6 +324,18 @@ class TwitterBot:
             self.driver.get("https://x.com/home")
             self._human_like_delay(4, 6)
             
+            # Debug: Check current page
+            current_url = self.driver.current_url
+            page_title = self.driver.title
+            print(f"DEBUG: Current URL: {current_url}")
+            print(f"DEBUG: Page title: {page_title}")
+            
+            # Check if we're actually logged in
+            if "login" in current_url.lower() or "login" in page_title.lower():
+                print("✗ NOT LOGGED IN - redirected to login page!")
+                print("Please log in manually and run the bot again.")
+                return
+            
             # Scroll to top to make compose box visible
             self.driver.execute_script("window.scrollTo(0, 0);")
             self._human_like_delay(2, 3)
