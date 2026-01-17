@@ -1051,9 +1051,19 @@ if __name__ == "__main__":
 
         # Example usage:
         print("\n" + "="*70)
-        print("STEP 1: Sending a random tweet...")
+        print("STEP 1: Sending random tweets...")
         print("="*70)
-        # 1. Send a random tweet from tweets.txt (with random hashtags appended)
+        # 1. Send first tweet
+        print("\n📝 Posting tweet #1...")
+        bot.send_tweet()
+        
+        # Short break between tweets
+        rest_time = random.uniform(30, 60)
+        print(f"\nBrief pause for {int(rest_time)}s...")
+        time.sleep(rest_time)
+        
+        # 2. Send second tweet
+        print("\n📝 Posting tweet #2...")
         bot.send_tweet()
         
         # Rest period (simulate taking a break)
@@ -1064,10 +1074,23 @@ if __name__ == "__main__":
         print("\n" + "="*70)
         print("STEP 2: Interacting with hashtag posts...")
         print("="*70)
-        # 2. Interact with a random hashtag from hashtags.txt (limit: 20)
-        random_hashtag = bot._get_random_hashtag()
-        print(f"Selected hashtag for interaction: #{random_hashtag}")
-        bot.interact_with_hashtag(random_hashtag, limit=20)
+        # 2a. First hashtag - 40 interactions
+        random_hashtag_1 = bot._get_random_hashtag()
+        print(f"\n🔖 First hashtag for interaction: #{random_hashtag_1}")
+        bot.interact_with_hashtag(random_hashtag_1, limit=40)
+        
+        # Brief pause between hashtags
+        rest_time = random.uniform(30, 60)
+        print(f"\nBrief pause for {int(rest_time)}s before next hashtag...")
+        time.sleep(rest_time)
+        
+        # 2b. Second hashtag - 30 interactions
+        random_hashtag_2 = bot._get_random_hashtag()
+        # Make sure it's different from first one
+        while random_hashtag_2 == random_hashtag_1:
+            random_hashtag_2 = bot._get_random_hashtag()
+        print(f"\n🔖 Second hashtag for interaction: #{random_hashtag_2}")
+        bot.interact_with_hashtag(random_hashtag_2, limit=30)
         
         # Rest period (simulate taking a break)
         rest_time = random.uniform(60, 120)
@@ -1077,8 +1100,8 @@ if __name__ == "__main__":
         print("\n" + "="*70)
         print("STEP 3: Retweeting from followings (with random hashtag filter)...")
         print("="*70)
-        # 3. Retweet posts from your followings/home feed that contain a random hashtag (limit: 10)
-        bot.retweet_from_followings(limit=10)
+        # 3. Retweet posts from your followings/home feed that contain a random hashtag (limit: 20)
+        bot.retweet_from_followings(limit=20)
 
         print("\n" + "="*70)
         print("✓ Automation finished successfully!")
