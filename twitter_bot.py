@@ -198,10 +198,11 @@ class TwitterBot:
                     self.driver = webdriver.Chrome(options=chrome_options)
                 self.wait = WebDriverWait(self.driver, 20)
                 print("✓ Successfully connected to Chrome!")
+                print("Make sure Chrome started correctly and is logged into X")
             except Exception as e:
                 print(f"✗ Error connecting to Chrome: {e}")
-            print("Make sure Chrome started correctly and is logged into X")
-            raise
+                print("Make sure Chrome started correctly and is logged into X")
+                raise
         
         # Now attempt auto-login if credentials available
         if has_credentials():
