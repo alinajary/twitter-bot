@@ -570,6 +570,78 @@ class TwitterBot:
         except:
             return (0, 0)
 
+    def _has_meaningful_content(self, tweet_element):
+        """
+        Check if tweet has meaningful text content (not just hashtags/links).
+        
+        Args:
+            tweet_element: The tweet article element
+        
+        Returns:
+            bool: True if has meaningful content, False otherwise
+        """
+        try:
+            # Find tweet text
+            text_selectors = [
+                './/div[@data-testid="tweetText"]',
+                './/div[@lang]',
+                './/*[contains(@class, "tweet-text")]',
+            ]
+            
+            tweet_text = ""
+            for selector in text_selectors:
+                try:
+                    text_element = tweet_element.find_element(By.XPATH, selector)
+                    tweet_text = text_element.text.strip()
+                    if tweet_text:
+                        break
+                except:
+                    continue
+            
+            if not tweet_text:
+                return False
+            
+            # Remove hashtags, mentions, and URLs to get actual content
+            import re
+            clean_text = re.sub(r'#\w+', '', tweet_text)  # Remove hashtags
+            clean_text = re.sub(r'@\w+', '', clean_text)  # Remove mentions
+            clean_text = re.sub(r'http\S+', '', clean_text)  # Remove URLs
+            clean_text = re.sub(r'pic\.twitter\.com\S+', '', clean_text)  # Remove pic links
+            clean_text = clean_text.strip()
+            
+            # Check if has at least 20 characters of actual content (about 3-4 words)
+            if len(clean_text) >= 20:
+                return True
+            
+            return False
+        except:
+            return False
+    
+    def _has_minimum_engagement(self, tweet_element, min_likes=2, min_retweets=1):
+        """
+        Check if tweet has minimum engagement (likes/retweets).
+        Filters out low-quality posts with few views and no engagement.
+        
+        Args:
+            tweet_element: The tweet article element
+            min_likes: Minimum likes required (default 2)
+            min_retweets: Minimum retweets required (default 1)
+        
+        Returns:
+            bool: True if meets minimum engagement, False otherwise
+        """
+        try:
+            likes, retweets = self._get_tweet_engagement(tweet_element)
+            
+            # Must have at least min_likes OR min_retweets
+            # This filters out posts with 5 views and 0 engagement
+            if likes >= min_likes or retweets >= min_retweets:
+                return True
+            
+            return False
+        except:
+            return False
+
     def _sort_by_engagement(self, tweet_elements, min_likes=0, min_retweets=0):
         """
         Sort tweets by engagement and filter by minimum thresholds.
@@ -699,7 +771,11 @@ class TwitterBot:
             self._human_like_delay(1, 2)
             
             # Type the tweet
-            self.driver.find_element(By.CSS_SELECTOR, 'div[role="textbox"]').send_keys(full_tweet)
+            # Remove emojis that ChromeDriver can't handle (non-BMP characters)
+            import re
+            # Remove all emojis and special characters outside BMP
+            tweet_for_chromedriver = re.sub(r'[^\u0000-\uFFFF]', '', full_tweet)
+            self.driver.find_element(By.CSS_SELECTOR, 'div[role="textbox"]').send_keys(tweet_for_chromedriver)
             print(f"Typed tweet: {full_tweet}")
             self._human_like_delay(2, 4)
             
@@ -839,6 +915,16 @@ class TwitterBot:
                     # Scroll tweet into view
                     self.driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", tweet_element)
                     self._human_like_delay(1, 2)
+                    
+                    # Check if tweet has meaningful content
+                    if not self._has_meaningful_content(tweet_element):
+                        print(f"⏭ Skipping tweet #{i} - no meaningful content (only hashtags/links)")
+                        continue
+                    
+                    # Check if tweet has minimum engagement
+                    if not self._has_minimum_engagement(tweet_element, min_likes=2, min_retweets=1):
+                        print(f"⏭ Skipping tweet #{i} - low engagement (less than 2 likes or 1 retweet)")
+                        continue
                     
                     # Find like button within this specific tweet
                     like_button = None
@@ -983,7 +1069,17 @@ class TwitterBot:
                             if random_hashtag_filter.lower() not in tweet_text:
                                 continue
                             
-                            print(f"  ✓ Found matching tweet from @{account}")
+                            # Check if tweet has meaningful content
+                            if not self._has_meaningful_content(tweet):
+                                print(f"  ⏭ Skipping @{account} tweet - no meaningful content")
+                                continue
+                            
+                            # Check if tweet has minimum engagement
+                            if not self._has_minimum_engagement(tweet, min_likes=2, min_retweets=1):
+                                print(f"  ⏭ Skipping @{account} tweet - low engagement")
+                                continue
+                            
+                            print(f"  ✓ Found quality matching tweet from @{account}")
                             
                             # Find retweet button
                             retweet_button = None
@@ -1077,7 +1173,17 @@ class TwitterBot:
                         print(f"  Post #{posts_checked} doesn't contain #{random_hashtag_filter}, skipping...")
                         continue
                     
-                    print(f"  ✓ Found matching tweet with #{random_hashtag_filter}")
+                    # Check if tweet has meaningful content
+                    if not self._has_meaningful_content(tweet_element):
+                        print(f"  ⏭ Skipping post #{posts_checked} - no meaningful content")
+                        continue
+                    
+                    # Check if tweet has minimum engagement
+                    if not self._has_minimum_engagement(tweet_element, min_likes=2, min_retweets=1):
+                        print(f"  ⏭ Skipping post #{posts_checked} - low engagement")
+                        continue
+                    
+                    print(f"  ✓ Found quality tweet with #{random_hashtag_filter}")
                     
                     # Find retweet button within this tweet
                     retweet_button = None
