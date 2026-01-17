@@ -571,19 +571,6 @@ class TwitterBot:
                         self.driver.execute_script("window.scrollBy(0, 200);")
                         self._human_like_delay(1, 3)
                     
-                    # Find the article/post element to check its age
-                    articles = self.driver.find_elements(By.CSS_SELECTOR, 'article[data-testid="tweet"]')
-                    if not articles:
-                        articles = self.driver.find_elements(By.TAG_NAME, 'article')
-                    
-                    if articles and len(articles) > 0:
-                        # Check if the first visible post is recent (within 48 hours)
-                        if not self._is_post_recent(articles[0], max_hours=48):
-                            # Skip this old post and scroll to next
-                            self.driver.execute_script("window.scrollBy(0, 400);")
-                            self._human_like_delay(2, 4)
-                            continue
-                    
                     # Like the tweet - try multiple selector strategies
                     like_button = None
                     like_selectors = [
@@ -606,6 +593,19 @@ class TwitterBot:
                         self.driver.execute_script("window.scrollBy(0, 300);")
                         self._human_like_delay(2, 4)
                         continue
+                    
+                    # Find the parent article/post element of this like button to check its age
+                    try:
+                        post_element = like_button.find_element(By.XPATH, './ancestor::article')
+                        if not self._is_post_recent(post_element, max_hours=48):
+                            # Skip this old post and scroll to next
+                            print(f"  Skipping tweet #{i+1} - too old")
+                            self.driver.execute_script("window.scrollBy(0, 400);")
+                            self._human_like_delay(2, 4)
+                            continue
+                    except Exception as e:
+                        # If we can't find parent article or check age, proceed anyway
+                        pass
                     
                     # Scroll element into view
                     self.driver.execute_script("arguments[0].scrollIntoView(true);", like_button)
@@ -722,39 +722,7 @@ class TwitterBot:
                         self.driver.execute_script("window.scrollBy(0, 200);")
                         self._human_like_delay(1, 3)
                     
-                    # Find the article/post element to check its age
-                    articles = self.driver.find_elements(By.CSS_SELECTOR, 'article[data-testid="tweet"]')
-                    if not articles:
-                        articles = self.driver.find_elements(By.TAG_NAME, 'article')
-                    
-                    if articles and len(articles) > 0:
-                        # Check if the post is recent (within 48 hours)
-                        if not self._is_post_recent(articles[0], max_hours=48):
-                            # Skip this old post and scroll to next
-                            self.driver.execute_script("window.scrollBy(0, 400);")
-                            self._human_like_delay(2, 4)
-                            continue
-                    
-                    # Get the current tweet text to check for hashtag
-                    try:
-                        tweet_text = self.driver.execute_script("""
-                            const tweet = document.querySelector('[data-testid="tweet"]');
-                            if (tweet) {
-                                return tweet.innerText;
-                            }
-                            return '';
-                        """)
-                    except:
-                        tweet_text = ""
-                    
-                    # Check if the tweet contains the target hashtag
-                    if random_hashtag_filter.lower() not in tweet_text.lower():
-                        print(f"Post #{posts_checked} doesn't contain #{random_hashtag_filter}, skipping...")
-                        self.driver.execute_script("window.scrollBy(0, 300);")
-                        self._human_like_delay(2, 4)
-                        continue
-                    
-                    # Find retweet buttons
+                    # Find retweet buttons first to locate the specific post
                     retweet_selectors = [
                         'button[data-testid="retweet"]',
                         '[data-testid="retweet"]',
@@ -769,6 +737,45 @@ class TwitterBot:
                         except:
                             continue
                     
+                    if not retweet_button:
+                        self.driver.execute_script("window.scrollBy(0, 300);")
+                        self._human_like_delay(2, 4)
+                        continue
+                    
+                    # Find the parent article of this retweet button to check its age and content
+                    try:
+                        post_element = retweet_button.find_element(By.XPATH, './ancestor::article')
+                        
+                        # Check if the post is recent (within 48 hours)
+                        if not self._is_post_recent(post_element, max_hours=48):
+                            print(f"  Skipping post #{posts_checked} - too old")
+                            self.driver.execute_script("window.scrollBy(0, 400);")
+                            self._human_like_delay(2, 4)
+                            continue
+                        
+                        # Get tweet text from this specific post element
+                        tweet_text = post_element.text
+                    except Exception as e:
+                        # Fallback to old method if can't find parent
+                        try:
+                            tweet_text = self.driver.execute_script("""
+                                const tweet = document.querySelector('[data-testid="tweet"]');
+                                if (tweet) {
+                                    return tweet.innerText;
+                                }
+                                return '';
+                            """)
+                        except:
+                            tweet_text = ""
+                    
+                    # Check if the tweet contains the target hashtag
+                    if random_hashtag_filter.lower() not in tweet_text.lower():
+                        print(f"Post #{posts_checked} doesn't contain #{random_hashtag_filter}, skipping...")
+                        self.driver.execute_script("window.scrollBy(0, 300);")
+                        self._human_like_delay(2, 4)
+                        continue
+                    
+                    # We already found retweet_button earlier, just verify it still exists
                     if not retweet_button:
                         print(f"No more posts found, stopping.")
                         break
