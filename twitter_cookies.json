@@ -1,0 +1,380 @@
+[
+  {
+    "domain": ".yandex.com",
+    "name": "bh",
+    "value": "",
+    "path": "/",
+    "expires": 13422142852000000,
+    "secure": true,
+    "httpOnly": false
+  },
+  {
+    "domain": ".yandex.com",
+    "name": "i",
+    "value": "",
+    "path": "/",
+    "expires": 13422142829809875,
+    "secure": true,
+    "httpOnly": false
+  },
+  {
+    "domain": ".yandex.com",
+    "name": "yandexuid",
+    "value": "",
+    "path": "/",
+    "expires": 13419118829000000,
+    "secure": true,
+    "httpOnly": false
+  },
+  {
+    "domain": ".yandex.com",
+    "name": "yashr",
+    "value": "",
+    "path": "/",
+    "expires": 13419118829324654,
+    "secure": true,
+    "httpOnly": true
+  },
+  {
+    "domain": ".yandex.com",
+    "name": "ymex",
+    "value": "",
+    "path": "/",
+    "expires": 13419118829000000,
+    "secure": true,
+    "httpOnly": false
+  },
+  {
+    "domain": ".yandex.com",
+    "name": "yp",
+    "value": "",
+    "path": "/",
+    "expires": 13422142829809902,
+    "secure": true,
+    "httpOnly": false
+  },
+  {
+    "domain": ".yandex.com",
+    "name": "yuidss",
+    "value": "",
+    "path": "/",
+    "expires": 13419118829000000,
+    "secure": true,
+    "httpOnly": false
+  },
+  {
+    "domain": ".yandex.com",
+    "name": "receive-cookie-deprecation",
+    "value": "",
+    "path": "/",
+    "expires": 13419118852000000,
+    "secure": true,
+    "httpOnly": true
+  },
+  {
+    "domain": ".twitter.com",
+    "name": "guest_id",
+    "value": "",
+    "path": "/",
+    "expires": 13423513707194158,
+    "secure": true,
+    "httpOnly": false
+  },
+  {
+    "domain": ".twitter.com",
+    "name": "guest_id_ads",
+    "value": "",
+    "path": "/",
+    "expires": 13423513707194118,
+    "secure": true,
+    "httpOnly": false
+  },
+  {
+    "domain": ".twitter.com",
+    "name": "guest_id_marketing",
+    "value": "",
+    "path": "/",
+    "expires": 13423513707194044,
+    "secure": true,
+    "httpOnly": false
+  },
+  {
+    "domain": ".twitter.com",
+    "name": "personalization_id",
+    "value": "",
+    "path": "/",
+    "expires": 13423513707194138,
+    "secure": true,
+    "httpOnly": false
+  },
+  {
+    "domain": ".dropbox.com",
+    "name": "__Secure-dbx_consent",
+    "value": "",
+    "path": "/",
+    "expires": 13425587612000000,
+    "secure": true,
+    "httpOnly": false
+  },
+  {
+    "domain": ".dropbox.com",
+    "name": "dbx_js_analytics_id",
+    "value": "",
+    "path": "/scl/fi/e5g4u3mhzjl9wkk7fbt5h",
+    "expires": 13444426413481668,
+    "secure": true,
+    "httpOnly": false
+  },
+  {
+    "domain": "www.dropbox.com",
+    "name": "gvc",
+    "value": "",
+    "path": "/",
+    "expires": 13444426411342884,
+    "secure": true,
+    "httpOnly": true
+  },
+  {
+    "domain": ".dropbox.com",
+    "name": "locale",
+    "value": "",
+    "path": "/",
+    "expires": 13444426411343102,
+    "secure": false,
+    "httpOnly": false
+  },
+  {
+    "domain": "www.dropbox.com",
+    "name": "__Host-js_csrf",
+    "value": "",
+    "path": "/",
+    "expires": 13441402432338835,
+    "secure": true,
+    "httpOnly": false
+  },
+  {
+    "domain": "www.dropbox.com",
+    "name": "__Host-ss",
+    "value": "",
+    "path": "/",
+    "expires": 13441402432338907,
+    "secure": true,
+    "httpOnly": true
+  },
+  {
+    "domain": ".dropbox.com",
+    "name": "_iidt",
+    "value": "",
+    "path": "/",
+    "expires": 13441402430050698,
+    "secure": true,
+    "httpOnly": true
+  },
+  {
+    "domain": ".dropbox.com",
+    "name": "_vid_t",
+    "value": "",
+    "path": "/",
+    "expires": 13441402430000000,
+    "secure": false,
+    "httpOnly": false
+  },
+  {
+    "domain": ".dropbox.com",
+    "name": "bjar",
+    "value": "",
+    "path": "/",
+    "expires": 13441402432339107,
+    "secure": true,
+    "httpOnly": true
+  },
+  {
+    "domain": ".dropbox.com",
+    "name": "blid",
+    "value": "",
+    "path": "/",
+    "expires": 13441402432339150,
+    "secure": true,
+    "httpOnly": true
+  },
+  {
+    "domain": ".dropbox.com",
+    "name": "db-help-center-uid",
+    "value": "",
+    "path": "/",
+    "expires": 13441402432339188,
+    "secure": true,
+    "httpOnly": true
+  },
+  {
+    "domain": "www.dropbox.com",
+    "name": "g_state",
+    "value": "",
+    "path": "/",
+    "expires": 13425418429000000,
+    "secure": false,
+    "httpOnly": false
+  },
+  {
+    "domain": ".www.dropbox.com",
+    "name": "jar",
+    "value": "",
+    "path": "/",
+    "expires": 13441402432339024,
+    "secure": true,
+    "httpOnly": true
+  },
+  {
+    "domain": ".dropbox.com",
+    "name": "last_active_linked_user_id",
+    "value": "",
+    "path": "/",
+    "expires": 13441402431580263,
+    "secure": true,
+    "httpOnly": false
+  },
+  {
+    "domain": ".dropbox.com",
+    "name": "last_active_role",
+    "value": "",
+    "path": "/",
+    "expires": 13441402431580140,
+    "secure": true,
+    "httpOnly": false
+  },
+  {
+    "domain": ".www.dropbox.com",
+    "name": "lid",
+    "value": "",
+    "path": "/",
+    "expires": 13441402432339066,
+    "secure": true,
+    "httpOnly": true
+  },
+  {
+    "domain": ".dropbox.com",
+    "name": "t",
+    "value": "",
+    "path": "/",
+    "expires": 13441402432338745,
+    "secure": true,
+    "httpOnly": true
+  },
+  {
+    "domain": ".x.com",
+    "name": "d_prefs",
+    "value": "",
+    "path": "/",
+    "expires": 13428592116876899,
+    "secure": true,
+    "httpOnly": false
+  },
+  {
+    "domain": ".x.com",
+    "name": "guest_id_ads",
+    "value": "",
+    "path": "/",
+    "expires": 13447254517114598,
+    "secure": true,
+    "httpOnly": false
+  },
+  {
+    "domain": ".x.com",
+    "name": "guest_id_marketing",
+    "value": "",
+    "path": "/",
+    "expires": 13447254517114723,
+    "secure": true,
+    "httpOnly": false
+  },
+  {
+    "domain": ".x.com",
+    "name": "personalization_id",
+    "value": "",
+    "path": "/",
+    "expires": 13447254517114795,
+    "secure": true,
+    "httpOnly": false
+  },
+  {
+    "domain": "x.com",
+    "name": "lang",
+    "value": "",
+    "path": "/",
+    "expires": 0,
+    "secure": false,
+    "httpOnly": false
+  },
+  {
+    "domain": ".x.com",
+    "name": "guest_id",
+    "value": "",
+    "path": "/",
+    "expires": 13447256563013684,
+    "secure": true,
+    "httpOnly": false
+  },
+  {
+    "domain": ".x.com",
+    "name": "auth_token",
+    "value": "",
+    "path": "/",
+    "expires": 13447259829674427,
+    "secure": true,
+    "httpOnly": true
+  },
+  {
+    "domain": ".x.com",
+    "name": "ct0",
+    "value": "",
+    "path": "/",
+    "expires": 13447259830037557,
+    "secure": true,
+    "httpOnly": false
+  },
+  {
+    "domain": "x.com",
+    "name": "g_state",
+    "value": "",
+    "path": "/",
+    "expires": 13428597428000000,
+    "secure": false,
+    "httpOnly": false
+  },
+  {
+    "domain": ".x.com",
+    "name": "kdt",
+    "value": "",
+    "path": "/",
+    "expires": 13447259829674214,
+    "secure": true,
+    "httpOnly": true
+  },
+  {
+    "domain": ".x.com",
+    "name": "__cuid",
+    "value": "",
+    "path": "/",
+    "expires": 13447641582000000,
+    "secure": false,
+    "httpOnly": false
+  },
+  {
+    "domain": ".x.com",
+    "name": "twid",
+    "value": "",
+    "path": "/",
+    "expires": 13444617588546139,
+    "secure": true,
+    "httpOnly": false
+  },
+  {
+    "domain": ".x.com",
+    "name": "__cf_bm",
+    "value": "",
+    "path": "/",
+    "expires": 13413084636329905,
+    "secure": true,
+    "httpOnly": true
+  }
+]

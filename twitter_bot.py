@@ -101,16 +101,17 @@ class TwitterBot:
             os.environ['DISPLAY'] = ':99'
             
             try:
-                # Use system chromedriver with UC (NO headless=True, using Xvfb instead)
+                # Use system chromedriver with UC (removed use_subprocess=False)
                 self.driver = uc.Chrome(
                     options=options, 
-                    use_subprocess=False,
                     driver_executable_path="/usr/bin/chromedriver"
                 )
                 self.wait = WebDriverWait(self.driver, 20)
                 print("✓ Successfully started undetected Chrome with virtual display!")
             except Exception as e:
                 print(f"✗ Error starting undetected Chrome: {e}")
+                import traceback
+                traceback.print_exc()
                 raise
         else:
             # Original method for Windows or non-headless
