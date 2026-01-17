@@ -95,19 +95,61 @@ class TwitterBot:
             options.add_argument('--no-sandbox')
             options.add_argument('--disable-dev-shm-usage')
             options.add_argument('--window-size=1920,1080')
-            options.add_argument(f'--user-data-dir={chrome_profile_path}')
+            # DON'T pass user-data-dir to UC - it manages profiles itself
             
             # Set virtual display for Xvfb
             os.environ['DISPLAY'] = ':99'
             
             try:
-                # Use system chromedriver with UC (removed use_subprocess=False)
+                # Use system chromedriver with UC
                 self.driver = uc.Chrome(
                     options=options, 
                     driver_executable_path="/usr/bin/chromedriver"
                 )
                 self.wait = WebDriverWait(self.driver, 20)
                 print("✓ Successfully started undetected Chrome with virtual display!")
+                
+                # Load cookies from file and inject them
+                cookie_file = os.path.join(os.path.dirname(__file__), 'twitter_cookies.json')
+                if os.path.exists(cookie_file):
+                    print("Loading authentication cookies...")
+                    import json
+                    with open(cookie_file, 'r') as f:
+                        cookies = json.load(f)
+                    
+                    # Navigate to x.com first (required to set cookies)
+                    self.driver.get("https://x.com")
+                    time.sleep(2)
+                    
+                    # Add each cookie
+                    for cookie in cookies:
+                        try:
+                            # Selenium add_cookie requires specific format
+                            cookie_dict = {
+                                'name': cookie['name'],
+                                'value': cookie['value'],
+                                'domain': cookie['domain'],
+                                'path': cookie['path'],
+                                'secure': cookie['secure'],
+                                'httpOnly': cookie['httpOnly']
+                            }
+                            # Add expiry if present
+                            if cookie.get('expires'):
+                                # Convert Chrome timestamp to Unix timestamp (seconds)
+                                cookie_dict['expiry'] = int(cookie['expires'] / 1000000 - 11644473600)
+                            
+                            self.driver.add_cookie(cookie_dict)
+                        except Exception as e:
+                            # Some cookies may fail to add, that's OK
+                            pass
+                    
+                    print(f"✓ Loaded {len(cookies)} cookies")
+                    # Refresh to apply cookies
+                    self.driver.get("https://x.com/home")
+                    time.sleep(3)
+                else:
+                    print("⚠ No cookie file found, will need to login manually")
+                
             except Exception as e:
                 print(f"✗ Error starting undetected Chrome: {e}")
                 import traceback
