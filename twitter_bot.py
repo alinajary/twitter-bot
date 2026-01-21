@@ -171,6 +171,10 @@ class TwitterBot:
             if (sys.platform == "linux" or sys.platform == "linux2") and os.geteuid() == 0:
                 cmd.append('--no-sandbox')
             
+            # If running as root on Linux, we must use --no-sandbox even in non-headless mode
+            if (sys.platform == "linux" or sys.platform == "linux2") and os.geteuid() == 0:
+                cmd.append('--no-sandbox')
+            
             # Add headless options for server mode
             if headless:
                 cmd.extend([
